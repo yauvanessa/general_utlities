@@ -19,7 +19,7 @@ def replace_locations(sessionID:int, RXfile:str, TXfile:str, dir:str):
     rxfile = rxfile.to_numpy()
     rx_utm = rxfile[:,[2,3]]
     # fit nearest neighbour to rx pts
-    nbrs = NearestNeighbors(n_neighbors=3,algorithm='ball_tree',p=2).fit(rx_utm)
+    nbrs = NearestNeighbors(n_neighbors=3,algorithm='ball_tree',p=2).fit(rx_utm) # set n_neighbours=1 to run faster
 
     # load Tx file from csv
     txfile = pd.read_csv(os.path.join(dir, TXfile))
