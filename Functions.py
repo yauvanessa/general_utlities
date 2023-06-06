@@ -1,5 +1,4 @@
 import os
-from scipy import signal as sig
 from datfiles_lib_parallel import *
 from os import listdir
 import pandas as pd
@@ -19,10 +18,14 @@ def replace_locations(sessionID:int, RXfile:str, TXfile:str, dir:str):
     rxfile = rxfile.to_numpy()
     rx_utm = rxfile[:,[2,3]]
     # fit nearest neighbour to rx pts
-    nbrs = NearestNeighbors(n_neighbors=3,algorithm='ball_tree',p=2).fit(rx_utm) # set n_neighbours=1 to run faster
+    nbrs_rx = NearestNeighbors(n_neighbors=1,algorithm='ball_tree',p=2).fit(rx_utm)
 
     # load Tx file from csv
     txfile = pd.read_csv(os.path.join(dir, TXfile))
+    txfile = txfile.to_numpy()
+    tx_utm = txfile[:,[2,3]] # TODO option to take from rx or tx file? or check which is closer and take that
+    # fit nearest neighbour to rx pts
+    nbrs_tx = NearestNeighbors(n_neighbors=1,algorithm='ball_tree',p=2).fit(tx_utm)
 
     # load in data file gps pts
     all_folds = [x[0] for x in os.walk(dir)]
@@ -45,7 +48,7 @@ def replace_locations(sessionID:int, RXfile:str, TXfile:str, dir:str):
                 gps_UTM_pt = np.array([gps_UTM[0],gps_UTM[1]])
 
                 # find closest neighbour to gps pt
-                dists, inds = nbrs.kneighbors([gps_UTM_pt])
+                dists, inds = nbrs_rx.kneighbors([gps_UTM_pt])
 
                 # get closest gps pt from rx file
                 closest = rxfile[inds[0,0]]
