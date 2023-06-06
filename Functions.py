@@ -59,6 +59,7 @@ def replace_locations(sessionID:int, RXfile:str, TXfile:str, dir:str):
                 # convert closest pt back to lat lon # TODO check error on this, maybe stick to UTM
                 closest_latlon = utm.to_latlon(closest[2],closest[3],gps_UTM[2],gps_UTM[3])
 
+                # force new location to file
                 force_file(node,closest_latlon[0],closest_latlon[1],closest[4],False,1)
 
 
@@ -74,3 +75,29 @@ def force_file(path:str, latitude:float, longitude:float, elevation:float, flag_
         flag_new (bool): _description_
         sid (int): session bucket ID
     """
+
+
+def polarity_correction(dir:str):
+    """changes polarity conversion factor from positive to negative
+
+    Args:
+        dir (str): data file (ascii)
+    """
+     
+     # read in ASCII file
+    fIn = open(dir, 'r', encoding="utf8", errors='ignore')
+    linesFIn = fIn.readlines()
+    print(fIn.read())
+    fIn.close()
+
+    # get conversion factor from header
+    cf = linesFIn[5]
+    addto = cf.split(':')
+    cfnew = addto[0] + ':-' + addto[1]
+    linesFIn[5] = cfnew # rewrite correction
+
+    # re-write file with fix
+    fOut = open(dir, 'w')
+    for f in linesFIn:
+         fOut.write('%s' % f)
+    fOut.close()
