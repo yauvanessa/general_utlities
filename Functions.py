@@ -99,8 +99,12 @@ def polarity_correction(dir:str):
     cfnew = addto[0] + ':-' + addto[1]
     linesFIn[5] = cfnew # rewrite correction
 
-    # re-write file with fix
+    # overwrite file with fix
     fOut = open(dir, 'w')
     for f in linesFIn:
          fOut.write('%s' % f)
     fOut.close()
+
+def IP_resistivity():
+    """calculate resistivity 
+    """
