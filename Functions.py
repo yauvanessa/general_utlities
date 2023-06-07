@@ -94,16 +94,21 @@ def polarity_correction(dir:str):
     fIn.close()
 
     # get conversion factor from header
-    cf = linesFIn[5]
-    addto = cf.split(':')
-    cfnew = addto[0] + ':-' + addto[1]
-    linesFIn[5] = cfnew # rewrite correction
+    cfstr = 'Conversion Factor'
+    for n in range(0,17): # number of header option; takes too long to check all
+        teststr = linesFIn[n]
 
-    # overwrite file with fix
-    fOut = open(dir, 'w')
-    for f in linesFIn:
-         fOut.write('%s' % f)
-    fOut.close()
+        if cfstr in teststr:
+            cf = linesFIn[n]
+            addto = cf.split(':')
+            cfnew = addto[0] + ':-' + addto[1]
+            linesFIn[n] = cfnew # rewrite correction
+
+            # overwrite file with fix
+            fOut = open(dir, 'w')
+            for f in linesFIn:
+                fOut.write('%s' % f)
+            fOut.close()
 
 def IP_resistivity():
     """calculate resistivity 
