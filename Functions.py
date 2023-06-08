@@ -141,6 +141,25 @@ def update_resistivity(fIn:str):
     f.close()    
 
 def calculate_geofactor(Rx1East,Rx1North,Rx1Elev,Rx2East,Rx2North,Rx2Elev,Tx1East,Tx1North,Tx1Elev,Tx2East,Tx2North,Tx2Elev):
+    """calculates the geometric factor for resistivity, given rx and tx locations
+
+    Args:
+        Rx1East (float): _description_
+        Rx1North (float): _description_
+        Rx1Elev (float): _description_
+        Rx2East (float): _description_
+        Rx2North (float): _description_
+        Rx2Elev (float): _description_
+        Tx1East (float): _description_
+        Tx1North (float): _description_
+        Tx1Elev (float): _description_
+        Tx2East (float): _description_
+        Tx2North (float): _description_
+        Tx2Elev (float): _description_
+
+    Returns:
+        float: recalculated geometric factor
+    """
     r1 = ((Rx1East - Tx1East)**2 +
         (Rx1North - Tx1North)**2 +
         (Rx1Elev - Tx1Elev)**2)**0.5
