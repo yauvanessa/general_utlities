@@ -4,6 +4,8 @@ from os import listdir
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 import h5py
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
 def replace_locations(sessionID:int, RXfile:str, TXfile:str, dir:str, datInfo=[]):
     """function for replacing reciever GPS with more accurate location; loops through multiple nodes
@@ -140,6 +142,7 @@ def update_resistivity(fIn:str):
     f.attrs['apparent_resistivity'] = res
     f.close()    
 
+
 def calculate_geofactor(Rx1East,Rx1North,Rx1Elev,Rx2East,Rx2North,Rx2Elev,Tx1East,Tx1North,Tx1Elev,Tx2East,Tx2North,Tx2Elev):
     """calculates the geometric factor for resistivity, given rx and tx locations
 
@@ -176,3 +179,52 @@ def calculate_geofactor(Rx1East,Rx1North,Rx1Elev,Rx2East,Rx2North,Rx2Elev,Tx1Eas
     K_new = 1 / ((1 / r1 - 1 / r2) - (1 / r3 - 1 / r4))
 
     return K_new
+
+
+def decay_fit(fIn:str):
+    """fits decay curve to a stretched exponential function; returns fit parameters
+
+    Args:
+        fIn (str): hdf5 file
+    """
+
+    # read in h5 file
+    f = h5py.File(fIn, 'r+')
+
+    t = f['vs_window_centers']
+    t = t[:]/1000 # get from ms to s
+    Vs = f['decay']
+    # plt.scatter(t,Vs)
+
+    # fit decay curve
+    popt, _ = curve_fit(exponential_decay_estimate, t, Vs, p0=(0.5,0.5,0.5)) # random initial guesses req to get ok fit
+    a, b, c = popt # get fit parameters
+
+    # get y data from fit
+    exp_fit = exponential_decay_estimate(t, a, b, c)
+    # plt.scatter(t,exp_fit)
+
+    # calculate std of fit
+    std = np.std(Vs - exp_fit)
+
+    # write parameters to file
+    f.attrs['decay_fit_a'] = a
+    f.attrs['decay_fit_b'] = b
+    f.attrs['decay_fit_c'] = c
+    f.attrs['decay_fit_std'] = std
+    f.close()
+
+
+def exponential_decay_estimate(x, a, b, c):
+    """stretched exponential function
+
+    Args:
+        x (array): x data
+        a (float): function parameter
+        b (float): function parameter
+        c (float): function parameter
+
+    Returns:
+        array: y data
+    """
+    return a * np.exp(-x ** b) + c
