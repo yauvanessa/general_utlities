@@ -3,6 +3,7 @@ from datfiles_lib_parallel import *
 from os import listdir
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
+import h5py
 
 def replace_locations(sessionID:int, RXfile:str, TXfile:str, dir:str, datInfo=[]):
     """function for replacing reciever GPS with more accurate location; loops through multiple nodes
@@ -110,6 +111,49 @@ def polarity_correction(dir:str):
                 fOut.write('%s' % f)
             fOut.close()
 
-def IP_resistivity():
-    """calculate resistivity 
+
+def update_resistivity(fIn:str):
+    """loads the h5file and calculates + updates the resistivity; rewrites the h5file
+    Helpful article: https://archive.epa.gov/esd/archive-geophysics/web/html/resistivity_methods.html
+
+    Args:
+        fIn (str): hdf5 file
     """
+    # read in h5 file
+    f = h5py.File(fIn, 'r+')
+
+    # assign variables from file
+    V = f.attrs['voltage']
+    I = f.attrs['current']
+    #K = f.attrs['geometric_factor']
+
+    # update geometric factor K
+    K = calculate_geofactor(f.attrs['receiver1_easting'], f.attrs['receiver1_northing'], f.attrs['receiver1_altitude'], 
+                            f.attrs['receiver2_easting'], f.attrs['receiver2_northing'], f.attrs['receiver2_altitude'],
+                            f.attrs['transmit_easting'], f.attrs['transmit_northing'], f.attrs['transmit_altitude'],
+                            f.attrs['transmit2_easting'], f.attrs['transmit2_northing'], f.attrs['transmit2_altitude'])
+
+    # recalculate resistivity
+    res = 2*np.pi*K*(V/I)
+    
+    # assign new resistivity to file
+    f.attrs['apparent_resistivity'] = res
+    f.close()    
+
+def calculate_geofactor(Rx1East,Rx1North,Rx1Elev,Rx2East,Rx2North,Rx2Elev,Tx1East,Tx1North,Tx1Elev,Tx2East,Tx2North,Tx2Elev):
+    r1 = ((Rx1East - Tx1East)**2 +
+        (Rx1North - Tx1North)**2 +
+        (Rx1Elev - Tx1Elev)**2)**0.5
+    r2 = ((Rx2East - Tx1East)**2 +
+        (Rx2North - Tx1North)**2 +
+        (Rx2Elev - Tx1Elev)**2)**0.5
+    r3 = ((Rx1East - Tx2East)**2 +
+        (Rx1North - Tx2North)**2 +
+        (Rx1Elev - Tx2Elev)**2)**0.5
+    r4 = ((Rx2East - Tx2East)**2 +
+        (Rx2North - Tx2North)**2 +
+        (Rx2Elev - Tx2Elev)**2)**0.5
+
+    K_new = 1 / ((1 / r1 - 1 / r2) - (1 / r3 - 1 / r4))
+
+    return K_new
