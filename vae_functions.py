@@ -3,6 +3,11 @@ import torch
 import EMtools as DCIP
 import utm
 import base64
+import plotly.express as px
+import plotly.graph_objects as go
+import dash_daq as daq
+from dash import Dash, dcc, html, Input, Output
+from plotly.subplots import make_subplots
 from vae_classes import *
 from matplotlib.patches import Ellipse
 from sklearn.mixture import GaussianMixture
@@ -90,28 +95,35 @@ def plot_latent_space(autoencoder, data, device, num_batches=100, saveIt=0):
     Saves figure as html if saveIt set to 1. Defaults to 0.
     """
     try:
-        fig = plt.figure()
-        for i, (x, y) in enumerate(data):
-            x = x.type(torch.float32)
-            z = autoencoder.encoder(x.to(device))
-            z = z.cpu().detach().numpy()
-        
-            plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
-            plt.title('latent space')
+        app = Dash(__name__)
+
+        for i, (x1, y1) in enumerate(data):
+            x1 = x1.type(torch.float32)
+            z1 = autoencoder.encoder(x1.to(device))
+            z1 = z1.cpu().detach().numpy()
+
+            fig = px.scatter(x=z1[:, 0], y=z1[:, 1], title='latent space')
+            fig.update_traces(marker=dict(color=y1, colorscale='sunsetdark', showscale=False))
+
             if i > num_batches:
-                plt.colorbar()
-                break 
+                fig.update_traces(marker=dict(showscale=True))
+                break
     except Exception:
         print('Could not plot latent space')
 
     else:
         try:
-            if saveIt == 1:
-                save_html(fig, 'plt_latentspace.html')
+            app.layout = html.Div([
+                dcc.Graph(id='plt_latentspace', figure=fig),
+            ])
+
+            # if saveIt == 1:
+            #     print('1')
+            #     # save_html(fig, 'plt_latentspace.html')
         except Exception:
             print('Could not save figure')
 
-    return fig
+    return fig, app
 
 
 def plot_reconstructions(testdata, autoencoder, device, saveIt=0):
@@ -119,27 +131,31 @@ def plot_reconstructions(testdata, autoencoder, device, saveIt=0):
     Saves figure as html if saveIt set to 1. Defaults to 0.
     """
     try:
-        fig = plt.figure()
+        app = Dash(__name__)
         xc = torch.from_numpy(testdata[3][0]).type(torch.float32).to(device)
         # print(vae(xc).view(1, 1200))
 
         xc.to(device)
-        plt.plot(autoencoder(xc).view(1, 1200).cpu().detach().numpy()[0,:], 'r')
-        plt.plot(xc.cpu().detach().numpy()[0,:])
-        plt.legend(labels=('VAE','TRAIN'))
 
-        plt.title(f'Reconstruction error: {np.linalg.norm(autoencoder(xc).view(1, 1200).cpu().detach().numpy()[0,:] - xc.cpu().detach().numpy()[0,:])}')
+        fig = go.Figure()
+        trace1 = go.Line(y=autoencoder(xc).view(1, 1200).cpu().detach().numpy()[0,:], name='VAE')
+        trace2 = go.Line(y=xc.cpu().detach().numpy()[0,:], name='TRAIN')
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.add_trace(trace1)
+        fig.add_trace(trace2, secondary_y=True)
+        # plt.title(f'Reconstruction error: {np.linalg.norm(autoencoder(xc).view(1, 1200).cpu().detach().numpy()[0,:] - xc.cpu().detach().numpy()[0,:])}')
     except Exception:
         print('Could not plot reconstructed noise')
 
     else:
         try:
-            if saveIt == 1:
-                save_html(fig, 'plt_reconstruction.html')
+            app.layout = html.Div([
+                dcc.Graph(id='plt_reconstruction', figure=fig),
+            ])
         except Exception:
             print('Could not save figure')
 
-    return fig
+    return fig, app
 
 
 def load_DCIPtimeseries(path, vae, device):
@@ -556,19 +572,19 @@ def plot_voltagedecay(stack, stack2, decay, decay2, mx1, mx2, mid_time, node, sa
     return fig, axs
 
 
-def save_html(fig, title):
-    """saves a figure as an .html file with a given title name
-    """
+# def save_html(fig, title):
+#     """saves a figure as an .html file with a given title name
+#     """
 
-    try:
-        tmpfile = BytesIO()
-        fig.savefig(tmpfile, format='png')
-        encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
-        html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
-    except Exception:
-        print('Unable to encode png figure as html')
+#     try:
+#         tmpfile = BytesIO()
+#         fig.savefig(tmpfile, format='png')
+#         encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+#         html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+#     except Exception:
+#         print('Unable to encode png figure as html')
 
-    else:
-        # write to html
-        with open(title, 'w') as f:
-            f.write(html)
+#     else:
+#         # write to html
+#         with open(title, 'w') as f:
+#             f.write(html)
