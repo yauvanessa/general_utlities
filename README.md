@@ -1,1 +1,1 @@
-# General Utilities for geophysics
+# General Utilities for Geophysics
