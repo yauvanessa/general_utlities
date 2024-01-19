@@ -119,7 +119,7 @@ def plot_latent_space(autoencoder, data, device, num_batches=100, saveIt=0):
 
             # if saveIt == 1:
             #     print('1')
-            #     # save_html(fig, 'plt_latentspace.html')
+            #     save_html(fig, 'plt_latentspace.html')
         except Exception:
             print('Could not save figure')
 
@@ -143,7 +143,11 @@ def plot_reconstructions(testdata, autoencoder, device, saveIt=0):
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         fig.add_trace(trace1)
         fig.add_trace(trace2, secondary_y=True)
-        # plt.title(f'Reconstruction error: {np.linalg.norm(autoencoder(xc).view(1, 1200).cpu().detach().numpy()[0,:] - xc.cpu().detach().numpy()[0,:])}')
+
+        reconerr = np.linalg.norm(autoencoder(xc).view(1, 1200).cpu().detach().numpy()[0,:] 
+                                                                          - xc.cpu().detach().numpy()[0,:])
+        fig.update_layout(title = f'Reconstruction error: {reconerr}')
+
     except Exception:
         print('Could not plot reconstructed noise')
 
@@ -267,15 +271,18 @@ def plot_histograms(reconstruction_errors, stds, saveIt=0):
 
     """
     try:
-        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+        app = Dash(__name__)
 
-        axs[0].hist(np.log(reconstruction_errors), 100)
-        axs[0].set_title('a) Reconstruction Errors')
-        axs[0].set_xlabel('log(reconstruction error)')
+        log_recon = np.log(reconstruction_errors)
+        std_noise = [round(decm, 3) for decm in stds]
+        fig = make_subplots(rows=1, cols=2, subplot_titles=('a) Reconstruction Errors', 'b) Standard deviation of estimated noise'))
 
-        axs[1].hist([round(decm, 3) for decm in stds], 100) # round off std values
-        axs[1].set_title('b) Standard deviation of estimated noise')
-        axs[1].set_xlabel('standard deviation')
+        fig.add_trace(go.Histogram(x=log_recon, nbinsx=100), row=1, col=1)
+        fig.update_xaxes(title_text='log(reconstruction error)', row=1, col=1)
+
+        fig.add_trace(go.Histogram(x=std_noise, nbinsx=100), row=1, col=2)
+        fig.update_xaxes(title_text='standard deviation', row=1, col=2)
+
     except Exception:
         print('Could not plot histogram of vae reconstruction errors')
 
@@ -286,7 +293,7 @@ def plot_histograms(reconstruction_errors, stds, saveIt=0):
         except Exception:
             print('Could not save figure')
 
-    return fig, axs
+    return fig, app
 
 
 def plot_dist(locations, stds, stds_raw, rec_error, saveIt=0):
@@ -294,8 +301,8 @@ def plot_dist(locations, stds, stds_raw, rec_error, saveIt=0):
     Saves figure as html if saveIt set to 1. Defaults to 0.
 
     """
+
     try:
-        mpl.rcParams['axes.formatter.useoffset'] = False
         fig, axs = plt.subplots(1, 3, figsize=(12, 6))
 
         im = axs[0].scatter(np.vstack(locations)[:, 0], np.vstack(locations)[:, 1], c=stds, cmap='Spectral_r')
@@ -323,6 +330,7 @@ def plot_dist(locations, stds, stds_raw, rec_error, saveIt=0):
         axs[2].tick_params(axis='both', which='major', labelsize=6)
 
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.4, hspace=0.4)
+
     except Exception:
         print('Could not plot standard deviations')
 
@@ -572,19 +580,19 @@ def plot_voltagedecay(stack, stack2, decay, decay2, mx1, mx2, mid_time, node, sa
     return fig, axs
 
 
-# def save_html(fig, title):
-#     """saves a figure as an .html file with a given title name
-#     """
+def save_html(fig, title):
+    """saves a figure as an .html file with a given title name
+    """
 
-#     try:
-#         tmpfile = BytesIO()
-#         fig.savefig(tmpfile, format='png')
-#         encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
-#         html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
-#     except Exception:
-#         print('Unable to encode png figure as html')
+    try:
+        tmpfile = BytesIO()
+        fig.savefig(tmpfile, format='png')
+        encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+        html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+    except Exception:
+        print('Unable to encode png figure as html')
 
-#     else:
-#         # write to html
-#         with open(title, 'w') as f:
-#             f.write(html)
+    else:
+        # write to html
+        with open(title, 'w') as f:
+            f.write(html)
